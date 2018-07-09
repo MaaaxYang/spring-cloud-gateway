@@ -1,0 +1,43 @@
+server:
+  port: 8600
+  http2:
+    enabled: true
+
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+      gateway:
+        default-filters:
+        - AddResponseHeader=X-Response-Default-Foo, Default-Bar
+        - Elapsed=true
+        routes:
+        - id: consumer1
+          uri: http://localhost:10001
+          predicates:
+          - Path=/consumer1/**
+          filters:
+          - StripPrefix=1
+          - name: Hystrix
+            args:
+              name: myHystrixCommand
+              fallbackUri: forward:/hystrixTimeout
+          - name: Retry
+            args:
+              retries: 3 #重试次数，默认3，不包含本次
+              status: 404 #重试response code，默认没有
+              statusSeries: 500 #重试response code的系列，100（info），200（success），300（redirect），400（client error），500（server error），默认500
+              method: GET #重试的request请求，默认GET
+
+        - id: consumer2
+          uri: http://localhost:10002
+          predicates:
+          - Path=/consumer2/**
+          filters:
+          - StripPrefix=1
+
+        - id: baidu
+          uri: http://www.baidu.com
+          predicates:
+          - Path=/baidu
